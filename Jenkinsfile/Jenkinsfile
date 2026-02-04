@@ -43,8 +43,8 @@ pipeline {
                         sonar-scanner \
                             -Dsonar.projectKey=Project \
                             -Dsonar.sources=src \
-                            -Dsonar.host.url=http://13.201.137.168:9000/ \
-                            -Dsonar.login=sqa_6c22027d63c27dc6b4aa343136c1e112465616a8 | tee sonar-report.txt
+                            -Dsonar.host.url=http://54.167.12.16:9000/ \
+                            -Dsonar.login=sqa_1b4f3fa82cee6f3cad14282cd857512b1459bda0 | tee sonar-report.txt
                            '''
                     }      
 
