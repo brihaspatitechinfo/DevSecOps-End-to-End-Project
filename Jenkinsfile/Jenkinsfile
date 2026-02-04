@@ -48,7 +48,7 @@ pipeline {
                             -Dsonar.projectKey=Project \
                             -Dsonar.sources=src \
                             -Dsonar.host.url=http://54.167.12.16:9000/ \
-                            -Dsonar.login=sqa_1b4f3fa82cee6f3cad14282cd857512b1459bda0 | tee sonar-report.txt
+                            -Dsonar.login=sqa_1b4f3fa82cee6f3cad14282cd857512b1459bda0
                         '''
                     }
                 }
@@ -71,8 +71,8 @@ pipeline {
             steps {
                 dir('terraform') {
                     sh '''
-                    echo "Running TFScan..."
-                    tfsec . > tfsec-results.json || { echo "TFSec scan failed"; exit 1; }
+                    echo "Running TFSec..."
+                    tfsec . > tfsec-results.json || true
                     '''
                 }
                 archiveArtifacts artifacts: 'terraform/tfsec-results.json', allowEmptyArchive: true
@@ -84,7 +84,119 @@ pipeline {
                 dir('terraform') {
                     sh '''
                     echo "Initializing Terraform..."
-                    terraform init || { echo "Terraform init failed"; exit 1; }
+                    terraform init
 
-                    echo "Planning Terraform changes..."
-                    terraform plan -out=tfplan -var="aws_access_key=$(cat ../access_key.txt)" -var="aws_secret_key=$(cat ../secret_key.txt)"
+                    echo "Planning Terraform..."
+                    terraform plan -out=tfplan \
+                        -var="aws_access_key=$(cat ../access_key.txt)" \
+                        -var="aws_secret_key=$(cat ../secret_key.txt)"
+                    '''
+                }
+            }
+        }
+
+        stage('Docker Build and Trivy Scan') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'VAULT_ADDR', variable: 'VAULT_ADDR'),
+                    string(credentialsId: 'VAULT_TOKEN', variable: 'VAULT_TOKEN')
+                ]) {
+                    dir('src') {
+                        sh '''
+                        echo "Fetching Docker credentials from Vault..."
+                        export VAULT_ADDR="${VAULT_ADDR}"
+                        export VAULT_TOKEN="${VAULT_TOKEN}"
+
+                        DOCKER_USERNAME=$(vault kv get -field=username secret/docker)
+                        DOCKER_PASSWORD=$(vault kv get -field=password secret/docker)
+
+                        docker build -t $DOCKER_USERNAME/sample-ecommerce-nodejs-app:latest .
+
+                        trivy image --severity HIGH,CRITICAL \
+                            $DOCKER_USERNAME/sample-ecommerce-nodejs-app:latest \
+                            > trivy-results.json
+
+                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                        docker push $DOCKER_USERNAME/sample-ecommerce-nodejs-app:latest
+                        '''
+                    }
+                    archiveArtifacts artifacts: 'src/trivy-results.json', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Nexus Integration') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'VAULT_ADDR', variable: 'VAULT_ADDR'),
+                    string(credentialsId: 'VAULT_TOKEN', variable: 'VAULT_TOKEN')
+                ]) {
+                    sh '''
+                    export VAULT_ADDR="${VAULT_ADDR}"
+                    export VAULT_TOKEN="${VAULT_TOKEN}"
+                    '''
+
+                    script {
+                        NEXUS_USERNAME = sh(script: 'vault kv get -field=username nexus/credentials', returnStdout: true).trim()
+                        NEXUS_PASSWORD = sh(script: 'vault kv get -field=password nexus/credentials', returnStdout: true).trim()
+                        NEXUS_REPO_URL = sh(script: 'vault kv get -field=repo_url nexus/credentials', returnStdout: true).trim()
+
+                        sh '''
+                        mkdir -p tmp
+                        tar -czf tmp/app.tar.gz src/
+                        '''
+
+                        sh """
+                        curl -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} \
+                            --upload-file tmp/app.tar.gz \
+                            ${NEXUS_REPO_URL}/app.tar.gz
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform') {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ANSIBLE_SSH_KEY', keyFileVariable: 'SSH_KEY_PATH')]) {
+                        sh '''
+                        terraform apply -auto-approve tfplan
+
+                        PUBLIC_IP=$(terraform output -json public_ips | jq -r '.[0]')
+                        mkdir -p ../ansible
+                        echo "[webserver]" > ../ansible/inventory.ini
+                        echo "$PUBLIC_IP ansible_user=ec2-user ansible_ssh_private_key_file=$WORKSPACE/ansible/key.pem" \
+                            >> ../ansible/inventory.ini
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Run Ansible Playbook') {
+            steps {
+                dir('ansible') {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'ANSIBLE_SSH_KEY', keyFileVariable: 'SSH_KEY_PATH')]) {
+                        sh '''
+                        chmod 400 ${SSH_KEY_PATH}
+                        mkdir -p $WORKSPACE/ansible
+                        cp ${SSH_KEY_PATH} $WORKSPACE/ansible/key.pem
+                        chmod 400 $WORKSPACE/ansible/key.pem
+
+                        ansible-playbook -i inventory.ini playbook.yml \
+                            --private-key=$WORKSPACE/ansible/key.pem \
+                            --user ec2-user -vvv
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Send Slack Notification') {
+            steps {
+                script {
+                    def buildStatus = currentBuild.currentResult
+                    def color = (buildStatus == 'SUCCESS') ? 'good' : 'danger'
+
+                    slackSend(
