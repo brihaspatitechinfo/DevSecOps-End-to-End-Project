@@ -1,3 +1,4 @@
+# my global config
 global:
   scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
@@ -19,24 +20,19 @@ rule_files:
 # Here it's Prometheus itself.
 scrape_configs:
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
-  - job_name: "node-js-app"
+  - job_name: "nodejs-app"
 
     # metrics_path defaults to '/metrics'
     # scheme defaults to 'http'.
 
     static_configs:
-      - targets: ["localhost:3000"]
+      - targets: ["54.167.12.16:3000"]
 
   - job_name: "trivy"
     static_configs:
-      - targets: ["54.167.12.16:8085"]     # Replace with your Public IP
-
-  - job_name: "tfsec"
-    static_configs:
-      - targets: ["54.167.12.16:8086"]     # Replace with your Public IP
-
+      - targets: ["54.167.12.16:8085"]
 
   - job_name: 'otel-collector'
     scrape_interval: 5s
     static_configs:
-      - targets: ["54.167.12.16:8888"]     # Replace with your Public IP
+      - targets: ["54.167.12.16:8888"]
