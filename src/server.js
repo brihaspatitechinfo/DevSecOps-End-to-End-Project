@@ -1,3 +1,18 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  logging:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [logging]
+[root@ip-172-31-26-46 src]# cat server.js
 // Import dependencies
 const path = require('path');
 const express = require('express');
@@ -13,7 +28,7 @@ const resource = new Resource({
   'service.name': 'devsecops-app', // Service name for traces
 });
 const traceExporter = new OTLPTraceExporter({
-  url: 'http://15.207.71.232:4318/v1/traces', // Replace <collector-ip> with your OpenTelemetry Collector IP
+  url: 'http://54.167.12.16:4318/v1/traces', // Replace <collector-ip> with your OpenTelemetry Collector IP
 });
 const tracerProvider = new NodeTracerProvider({ resource });
 tracerProvider.addSpanProcessor(new SimpleSpanProcessor(traceExporter));
@@ -94,5 +109,9 @@ if (require.main === module) {
     console.log(`Server is running on http://localhost:${port}`);
   });
 }
-
+app.get('/custom', (req, res) => {
+    const span = tracer.startSpan('Custom Route Span');
+    res.send('This is a custom route');
+    span.end();
+});
 module.exports = app;
