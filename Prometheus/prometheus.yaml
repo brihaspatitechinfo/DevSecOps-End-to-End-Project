@@ -1,4 +1,3 @@
-# my global config
 global:
   scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
@@ -30,16 +29,14 @@ scrape_configs:
 
   - job_name: "trivy"
     static_configs:
-      - targets: ["65.2.150.42:8085"]     # Replace with your Public IP
+      - targets: ["54.167.12.16:8085"]     # Replace with your Public IP
 
   - job_name: "tfsec"
     static_configs:
-      - targets: ["52.66.246.248:8086"]     # Replace with your Public IP
+      - targets: ["54.167.12.16:8086"]     # Replace with your Public IP
 
 
   - job_name: 'otel-collector'
     scrape_interval: 5s
     static_configs:
-      - targets: ["52.66.246.248:8888"]     # Replace with your Public IP
-
-
+      - targets: ["54.167.12.16:8888"]     # Replace with your Public IP
