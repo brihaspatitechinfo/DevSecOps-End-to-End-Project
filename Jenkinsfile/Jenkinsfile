@@ -193,20 +193,20 @@ pipeline {
             }
         }
 
-        stage('Send Slack Notification') {
-            steps {
-                script {
-                    def buildStatus = currentBuild.currentResult
-                    def color = (buildStatus == 'SUCCESS') ? 'good' : 'danger'
-
-                    slackSend(
-                        channel: '#team-devops',
-                        message: "🚀 Pipeline Completed: ${buildStatus}",
-                        color: color
-                    )
-                }
-            }
-        }
-
-    }
-}
+     //   stage('Send Slack Notification') {
+     //       steps {
+     //           script {
+    //                def buildStatus = currentBuild.currentResult
+  //                  def color = (buildStatus == 'SUCCESS') ? 'good' : 'danger'
+//
+         //           slackSend(
+         //               channel: '#team-devops',
+        //                message: "🚀 Pipeline Completed: ${buildStatus}",
+       //                 color: color
+       //             )
+      //          }
+    //        }
+  //      }
+//
+ //   }
+//}
