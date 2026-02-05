@@ -79,21 +79,21 @@ pipeline {
             }
         }
 
-        stage('Terraform init & Plan') {
-            steps {
-                dir('terraform') {
-                    sh '''
-                    echo "Initializing Terraform..."
-                    terraform init
+       // stage('Terraform init & Plan') {
+       //     steps {
+        //        dir('terraform') {
+        //            sh '''
+        //            echo "Initializing Terraform..."
+        //            terraform init
 
-                    echo "Planning Terraform..."
-                    terraform plan -out=tfplan \
-                        -var="aws_access_key=$(cat ../access_key.txt)" \
-                        -var="aws_secret_key=$(cat ../secret_key.txt)"
-                    '''
-                }
-            }
-        }
+          //          echo "Planning Terraform..."
+           //         terraform plan -out=tfplan \
+           //             -var="aws_access_key=$(cat ../access_key.txt)" \
+           //             -var="aws_secret_key=$(cat ../secret_key.txt)"
+            //        '''
+            //    }
+           // }
+        //}
 
         stage('Docker Build and Trivy Scan') {
             steps {
