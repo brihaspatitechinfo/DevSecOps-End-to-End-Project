@@ -156,23 +156,23 @@ pipeline {
             }
         }
 
-        stage('Terraform Apply') {
-            steps {
-                dir('terraform') {
-                    withCredentials([sshUserPrivateKey(credentialsId: 'ANSIBLE_SSH_KEY', keyFileVariable: 'SSH_KEY_PATH')]) {
-                        sh '''
-                        terraform apply -auto-approve tfplan
+       // stage('Terraform Apply') {
+        //    steps {
+         //       dir('terraform') {
+          //          withCredentials([sshUserPrivateKey(credentialsId: 'ANSIBLE_SSH_KEY', keyFileVariable: 'SSH_KEY_PATH')]) {
+          //              sh '''
+           //             terraform apply -auto-approve tfplan
 
-                        PUBLIC_IP=$(terraform output -json public_ips | jq -r '.[0]')
-                        mkdir -p ../ansible
-                        echo "[webserver]" > ../ansible/inventory.ini
-                        echo "$PUBLIC_IP ansible_user=ec2-user ansible_ssh_private_key_file=$WORKSPACE/ansible/key.pem" \
-                            >> ../ansible/inventory.ini
-                        '''
-                    }
-                }
-            }
-        }
+            //            PUBLIC_IP=$(terraform output -json public_ips | jq -r '.[0]')
+             //           mkdir -p ../ansible
+             //           echo "[webserver]" > ../ansible/inventory.ini
+              //          echo "$PUBLIC_IP ansible_user=ec2-user ansible_ssh_private_key_file=$WORKSPACE/ansible/key.pem" \
+                //            >> ../ansible/inventory.ini
+               //         '''
+               //     }
+              //  }
+           // }
+       // }
 
         stage('Run Ansible Playbook') {
             steps {
