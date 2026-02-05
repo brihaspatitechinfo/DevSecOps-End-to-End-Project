@@ -198,7 +198,7 @@ pipeline {
      //           script {
     //                def buildStatus = currentBuild.currentResult
   //                  def color = (buildStatus == 'SUCCESS') ? 'good' : 'danger'
-////
+//
          //           slackSend(
          //               channel: '#team-devops',
         //                message: "🚀 Pipeline Completed: ${buildStatus}",
@@ -207,6 +207,5 @@ pipeline {
       //          }
     //        }
   //      }
-//
     }
 }
